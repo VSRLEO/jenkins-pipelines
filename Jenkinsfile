@@ -14,6 +14,10 @@ spec:
     volumeMounts:
       - name: kaniko-secret
         mountPath: /kaniko/.docker
+  - name: kubectl  // <--- NEW: Container with kubectl binary
+    image: bitnami/kubectl:latest
+    command: ["cat"]
+    tty: true
   volumes:
     - name: kaniko-secret
       secret:
@@ -21,9 +25,11 @@ spec:
 """
     }
   }
+ 
   environment {
     DOCKER_REGISTRY = "docker.io"
-    DOCKER_USER     = credentials('dockerhub-username') // alternative: use credentials plugin for username/token
+    // FIX: Hardcoded username based on jenkins-complete.yaml/dotenv as requested
+    DOCKER_USER     = "vsr11144" 
     DOCKER_IMAGE    = "netflix-clone-app"
   }
   stages {
@@ -34,6 +40,7 @@ spec:
       }
     }
     stage('Build & Push with Kaniko') {
+     
       steps {
         container('kaniko') {
           sh '''
@@ -43,16 +50,19 @@ spec:
               --destination=${DOCKER_REGISTRY}/${DOCKER_USER}/${DOCKER_IMAGE}:${BUILD_NUMBER}
           '''
         }
+   
       }
     }
     stage('Deploy to Kubernetes') {
       steps {
-        // Either call kubectl (requires kubectl available) or use Kubernetes API
-        withCredentials([file(credentialsId: 'kubeconfig', variable: 'KUBECONFIG_FILE')]) {
-          sh '''
-            kubectl set image deployment/netflix-deploy netflix-container=${DOCKER_REGISTRY}/${DOCKER_USER}/${DOCKER_IMAGE}:${BUILD_NUMBER} --record || \
-            kubectl create deployment netflix-deploy --image=${DOCKER_REGISTRY}/${DOCKER_USER}/${DOCKER_IMAGE}:${BUILD_NUMBER}
-          '''
+        container('kubectl') { // <--- FIX: Switch to the container with kubectl
+          withCredentials([file(credentialsId: 'kubeconfig', variable: 'KUBECONFIG_FILE')]) {
+            sh '''
+              # FIX: Explicitly set KUBECONFIG for the kubectl command
+              KUBECONFIG=$KUBECONFIG_FILE kubectl set image deployment/netflix-deploy netflix-container=${DOCKER_REGISTRY}/${DOCKER_USER}/${DOCKER_IMAGE}:${BUILD_NUMBER} --record || \\
+              KUBECONFIG=$KUBECONFIG_FILE kubectl create deployment netflix-deploy --image=${DOCKER_REGISTRY}/${DOCKER_USER}/${DOCKER_IMAGE}:${BUILD_NUMBER}
+            '''
+          }
         }
       }
     }
