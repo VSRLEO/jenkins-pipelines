@@ -2,7 +2,7 @@ pipeline {
   agent none
 
   stages {
-    stage('Build and Push Image') {
+    stage('Build & Push Image with Kaniko') {
       agent {
         kubernetes {
           label 'kaniko'
