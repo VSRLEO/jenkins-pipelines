@@ -1,11 +1,6 @@
 podTemplate(
   containers: [
     containerTemplate(
-      name: 'jnlp',
-      image: 'jenkins/inbound-agent:latest',
-      ttyEnabled: true
-    ),
-    containerTemplate(
       name: 'kaniko',
       image: 'gcr.io/kaniko-project/executor:debug',
       command: '/busybox/cat',
