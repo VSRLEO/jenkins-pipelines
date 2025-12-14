@@ -4,7 +4,7 @@ podTemplate(
     containerTemplate(
       name: 'jnlp',
       image: 'jenkins/inbound-agent:latest',
-      args: '-url http://jenkins.jenkins.svc.cluster.local:8080 -workDir=/home/jenkins/agent',
+      args: '-url http://jenkins.jenkins.svc.cluster.local:8080',
       ttyEnabled: true
     ),
     containerTemplate(
@@ -18,7 +18,7 @@ podTemplate(
     secretVolume(secretName: 'dockerhub-secret', mountPath: '/kaniko/.docker')
   ]
 ) {
-  node('kaniko-agent') {
+  node(POD_LABEL) {
     container('kaniko') {
       sh '''
         /kaniko/executor \
