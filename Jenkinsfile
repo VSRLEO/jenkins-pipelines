@@ -25,19 +25,15 @@ spec:
     }
   }
 
-  environment {
-    IMAGE_NAME = "docker.io/vsrleo/kaniko-test"
-  }
-
   stages {
-    stage('Build & Push Image with Kaniko') {
+    stage('Build & Push Image') {
       steps {
         container('kaniko') {
           sh '''
             /kaniko/executor \
               --context $WORKSPACE \
               --dockerfile $WORKSPACE/Dockerfile \
-              --destination $IMAGE_NAME:latest \
+              --destination docker.io/vsrleo/kaniko-test:latest \
               --verbosity info
           '''
         }
