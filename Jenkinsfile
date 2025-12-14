@@ -1,27 +1,31 @@
 podTemplate(
-  label: "kaniko-agent",
-  containers: [
-    containerTemplate(
-      name: 'jnlp',
-      image: 'jenkins/inbound-agent:latest'
-    ),
-    containerTemplate(
-      name: 'kaniko',
-      image: 'gcr.io/kaniko-project/executor:debug',
-      command: '/busybox/cat',
-      ttyEnabled: true
-    )
-  ],
-  volumes: [
-    secretVolume(
-      secretName: 'dockerhub-secret',
-      mountPath: '/kaniko/.docker/config.json',
-      subPath: '.dockerconfigjson'
-    )
-  ]
+  label: 'kaniko-agent',
+  yaml: """
+apiVersion: v1
+kind: Pod
+spec:
+  containers:
+  - name: kaniko
+    image: gcr.io/kaniko-project/executor:debug
+    command:
+    - /busybox/cat
+    tty: true
+    volumeMounts:
+    - name: docker-config
+      mountPath: /kaniko/.docker
+  - name: jnlp
+    image: jenkins/inbound-agent:latest
+    volumeMounts:
+    - name: docker-config
+      mountPath: /kaniko/.docker
+  volumes:
+  - name: docker-config
+    secret:
+      secretName: dockerhub-secret
+"""
 ) {
 
-  node("kaniko-agent") {
+  node('kaniko-agent') {
 
     stage('Checkout Source') {
       checkout scm
@@ -30,8 +34,10 @@ podTemplate(
     container('kaniko') {
 
       stage('Verify Docker Auth') {
-        sh 'ls -la /kaniko/.docker'
-        sh 'cat /kaniko/.docker/config.json | jq .'
+        sh '''
+          ls -la /kaniko/.docker
+          cat /kaniko/.docker/config.json
+        '''
       }
 
       stage('Build & Push Image') {
