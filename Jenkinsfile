@@ -1,4 +1,5 @@
 podTemplate(
+  label: 'kaniko-agent',
   containers: [
     containerTemplate(
       name: 'kaniko',
@@ -11,7 +12,7 @@ podTemplate(
     secretVolume(secretName: 'dockerhub-secret', mountPath: '/kaniko/.docker')
   ]
 ) {
-  node {
+  node('kaniko-agent') {
     container('kaniko') {
       sh '''
         /kaniko/executor \
