@@ -15,7 +15,8 @@ podTemplate(
   volumes: [
     secretVolume(
       secretName: 'dockerhub-secret',
-      mountPath: '/kaniko/.docker'
+      mountPath: '/kaniko/.docker/config.json',
+      subPath: '.dockerconfigjson'
     )
   ]
 ) {
@@ -28,8 +29,9 @@ podTemplate(
 
     container('kaniko') {
 
-      stage('Verify Workspace') {
-        sh 'ls -la'
+      stage('Verify Docker Auth') {
+        sh 'ls -la /kaniko/.docker'
+        sh 'cat /kaniko/.docker/config.json | jq .'
       }
 
       stage('Build & Push Image') {
