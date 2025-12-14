@@ -19,7 +19,13 @@ podTemplate(
     )
   ]
 ) {
+
   node("kaniko-agent") {
+
+    stage('Checkout Source') {
+      checkout scm
+    }
+
     container('kaniko') {
 
       stage('Verify Workspace') {
