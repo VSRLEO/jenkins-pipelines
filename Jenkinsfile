@@ -11,14 +11,13 @@ podTemplate(
     secretVolume(secretName: 'dockerhub-secret', mountPath: '/kaniko/.docker')
   ]
 ) {
-  node(POD_LABEL) {
+  node {
     container('kaniko') {
       sh '''
         /kaniko/executor \
           --context $WORKSPACE \
           --dockerfile Dockerfile \
-          --destination docker.io/vsrleo/kaniko-test:latest \
-          --verbosity info
+          --destination docker.io/vsrleo/kaniko-test:latest
       '''
     }
   }
