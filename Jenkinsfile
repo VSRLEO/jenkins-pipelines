@@ -1,17 +1,8 @@
-def agentLabel = "kaniko-agent-${UUID.randomUUID().toString()}"
+def agentLabel = "kaniko-agent-${UUID.randomUUID()}"
 
 podTemplate(
   label: agentLabel,
   containers: [
-    containerTemplate(
-      name: 'jnlp',
-      image: 'jenkins/inbound-agent:latest',
-      args: '-url http://jenkins.jenkins.svc.cluster.local:8080 -webSocket=false',
-      envVars: [
-        envVar(key: 'JENKINS_AGENT_PROTOCOLS', value: 'JNLP4-connect')
-      ],
-      ttyEnabled: true
-    ),
     containerTemplate(
       name: 'kaniko',
       image: 'gcr.io/kaniko-project/executor:debug',
@@ -20,7 +11,10 @@ podTemplate(
     )
   ],
   volumes: [
-    secretVolume(secretName: 'dockerhub-secret', mountPath: '/kaniko/.docker')
+    secretVolume(
+      secretName: 'dockerhub-secret',
+      mountPath: '/kaniko/.docker'
+    )
   ]
 ) {
   node(agentLabel) {
