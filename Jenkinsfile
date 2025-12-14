@@ -1,20 +1,12 @@
 pipeline {
   agent {
     kubernetes {
-      label "auto-kaniko-cicd"
-      defaultContainer 'jnlp'
+      defaultContainer 'kaniko'
       yaml """
 apiVersion: v1
 kind: Pod
-metadata:
-  labels:
-    app: kaniko
 spec:
-  serviceAccountName: jenkins
   containers:
-  - name: jnlp
-    image: jenkins/inbound-agent:latest
-
   - name: kaniko
     image: gcr.io/kaniko-project/executor:debug
     command:
@@ -25,11 +17,15 @@ spec:
       - name: docker-config
         mountPath: /kaniko/.docker
   volumes:
-    - name: docker-config
-      secret:
-        secretName: dockerhub-secret
+  - name: docker-config
+    secret:
+      secretName: dockerhub-secret
 """
     }
+  }
+
+  environment {
+    IMAGE_NAME = "docker.io/vsrleo/kaniko-test"
   }
 
   stages {
@@ -44,10 +40,9 @@ spec:
         container('kaniko') {
           sh '''
             /kaniko/executor \
-              --context $WORKSPACE \
-              --dockerfile $WORKSPACE/Dockerfile \
-              --destination docker.io/vsrleo/myapp:${BUILD_NUMBER} \
-              --verbosity info
+              --context=$WORKSPACE \
+              --dockerfile=$WORKSPACE/Dockerfile \
+              --destination=${IMAGE_NAME}:latest
           '''
         }
       }
