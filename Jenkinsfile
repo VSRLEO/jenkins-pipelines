@@ -9,12 +9,15 @@ apiVersion: v1
 kind: Pod
 spec:
   serviceAccountName: jenkins
+  restartPolicy: Never
   containers:
     - name: kaniko
       image: gcr.io/kaniko-project/executor:latest
-      command:
-        - cat
-      tty: true
+      args:
+        - --dockerfile=/workspace/Dockerfile
+        - --context=/workspace
+        - --destination=docker.io/vsr11144/netflix-clone-app:${BUILD_NUMBER}
+        - --destination=docker.io/vsr11144/netflix-clone-app:latest
       volumeMounts:
         - name: docker-config
           mountPath: /kaniko/.docker
@@ -30,39 +33,25 @@ spec:
     }
   }
 
-  environment {
-    DOCKER_REGISTRY = "docker.io"
-    DOCKER_USER     = "vsr11144"
-    DOCKER_IMAGE    = "netflix-clone-app"
-  }
-
   stages {
 
-    stage('Checkout') {
+    stage('Checkout Source') {
       steps {
-        checkout([
-          $class: 'GitSCM',
-          branches: [[name: '*/main']],
-          userRemoteConfigs: [[
-            url: 'https://github.com/VSRLEO/Netflix-Repo.git'
-          ]]
-        ])
+        checkout scm
       }
     }
 
-    stage('Build & Push Image (Kaniko)') {
+    stage('Build & Push Image with Kaniko') {
       steps {
         container('kaniko') {
           sh '''
-            /kaniko/executor \
-              --dockerfile=Dockerfile \
-              --context=dir:///workspace \
-              --destination=${DOCKER_REGISTRY}/${DOCKER_USER}/${DOCKER_IMAGE}:${BUILD_NUMBER} \
-              --destination=${DOCKER_REGISTRY}/${DOCKER_USER}/${DOCKER_IMAGE}:latest
+            echo "Starting Kaniko build..."
+            ls -la /workspace
           '''
         }
       }
     }
+
   }
 
   post {
@@ -70,7 +59,7 @@ spec:
       echo "Image pushed successfully to Docker Hub"
     }
     failure {
-      echo "Pipeline failed"
+      echo "Kaniko build failed"
     }
   }
 }
