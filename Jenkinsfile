@@ -1,33 +1,54 @@
-def podLabel = "kaniko-agent-${UUID.randomUUID().toString()}"
+pipeline {
+  agent {
+    kubernetes {
+      label "kaniko-agent"
+      defaultContainer 'kaniko'
+      yaml """
+apiVersion: v1
+kind: Pod
+spec:
+  containers:
+  - name: kaniko
+    image: gcr.io/kaniko-project/executor:debug
+    command:
+      - /busybox/cat
+    tty: true
+    env:
+      - name: DOCKER_CONFIG
+        value: /kaniko/.docker
+    volumeMounts:
+      - name: docker-config
+        mountPath: /kaniko/.docker/config.json
+        subPath: .dockerconfigjson
+      - name: workspace-volume
+        mountPath: /home/jenkins/agent
+  - name: jnlp
+    image: jenkins/inbound-agent:latest
+    volumeMounts:
+      - name: docker-config
+        mountPath: /kaniko/.docker/config.json
+        subPath: .dockerconfigjson
+      - name: workspace-volume
+        mountPath: /home/jenkins/agent
+  volumes:
+    - name: docker-config
+      secret:
+        secretName: dockerhub-secret
+    - name: workspace-volume
+      emptyDir: {}
+"""
+    }
+  }
 
-podTemplate(
-  label: podLabel,
-  containers: [
-    containerTemplate(
-      name: 'kaniko',
-      image: 'gcr.io/kaniko-project/executor:debug',
-      command: '/busybox/cat',
-      ttyEnabled: true,
-      envVars: [
-        envVar(key: 'DOCKER_CONFIG', value: '/kaniko/.docker')
-      ]
-    )
-  ],
-  volumes: [
-    secretVolume(
-      secretName: 'dockerhub-secret',
-      mountPath: '/kaniko/.docker'
-    )
-  ]
-) {
-  node(podLabel) {
-
+  stages {
     stage('Checkout') {
-      checkout scm
+      steps {
+        checkout scm
+      }
     }
 
     stage('Build & Push Image') {
-      container('kaniko') {
+      steps {
         sh '''
           /kaniko/executor \
             --context $WORKSPACE \
