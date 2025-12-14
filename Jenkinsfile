@@ -23,12 +23,14 @@ spec:
 
     - name: kaniko
       image: gcr.io/kaniko-project/executor:latest
+      command:
+        - /kaniko/executor
       args:
-        - "--dockerfile=/home/jenkins/agent/workspace/Dockerfile"
-        - "--context=/home/jenkins/agent/workspace"
-        - "--destination=docker.io/vsr11144/netflix-clone-app:${BUILD_NUMBER}"
-        - "--destination=docker.io/vsr11144/netflix-clone-app:latest"
-        - "--verbosity=info"
+        - --dockerfile=/home/jenkins/agent/workspace/Dockerfile
+        - --context=/home/jenkins/agent/workspace
+        - --destination=docker.io/vsr11144/netflix-clone-app:${BUILD_NUMBER}
+        - --destination=docker.io/vsr11144/netflix-clone-app:latest
+        - --verbosity=info
       volumeMounts:
         - name: docker-config
           mountPath: /kaniko/.docker
@@ -47,7 +49,7 @@ spec:
     stage('Build & Push Image') {
       steps {
         container('kaniko') {
-          echo "Kaniko build & push running"
+          echo "🚀 Kaniko build & push started"
         }
       }
     }
@@ -55,10 +57,10 @@ spec:
 
   post {
     success {
-      echo "✅ Image built and pushed to DockerHub"
+      echo "Image built and pushed to DockerHub"
     }
     failure {
-      echo "❌ Kaniko build failed"
+      echo " Kaniko build failed"
     }
   }
 }
