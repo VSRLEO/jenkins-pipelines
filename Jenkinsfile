@@ -4,6 +4,10 @@ podTemplate(
   label: agentLabel,
   containers: [
     containerTemplate(
+      name: 'jnlp',
+      image: 'jenkins/inbound-agent:latest'
+    ),
+    containerTemplate(
       name: 'kaniko',
       image: 'gcr.io/kaniko-project/executor:debug',
       command: '/busybox/cat',
@@ -19,6 +23,10 @@ podTemplate(
 ) {
   node(agentLabel) {
     container('kaniko') {
+
+      // DEBUG (keep once)
+      sh 'ls -la $WORKSPACE'
+
       sh '''
         /kaniko/executor \
           --context $WORKSPACE \
