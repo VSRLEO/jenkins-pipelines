@@ -1,49 +1,45 @@
 pipeline {
-  agent {
-    kubernetes {
-      label 'kaniko'
-      // Define the custom container here, not inside a 'yaml' block
-      containerTemplate {
-        name 'kaniko'
-        image 'gcr.io/kaniko-project/executor:debug'
-        command '/busybox/cat'
-        tty true
-        volumeMounts {
-          volumeMount {
-            mountPath '/kaniko/.docker'
-            name 'docker-config'
-          }
-        }
-      }
-      
-      // Define the required volume here
-      volumes {
-        secret {
-          secretName 'dockerhub-secret'
-          mountPath '/kaniko/.docker'
-          name 'docker-config'
-        }
-      }
-    }
-  }
-
-  environment {
-    IMAGE_NAME = "docker.io/vsrleo/kaniko-test"
-  }
+  agent none
 
   stages {
-    stage('Build & Push') {
-      steps {
-        // Run the steps inside the custom 'kaniko' container
-        container('kaniko') {
-          sh '''
-            /kaniko/executor \
-              --context $WORKSPACE \
-              --dockerfile $WORKSPACE/Dockerfile \
-              --destination $IMAGE_NAME:latest \
-              --verbosity info
-          '''
+    stage('Build and Push Image') {
+      agent {
+        kubernetes {
+          label 'kaniko'
+          defaultContainer 'kaniko'
+          yaml """
+apiVersion: v1
+kind: Pod
+spec:
+  containers:
+  - name: kaniko
+    image: gcr.io/kaniko-project/executor:debug
+    command:
+      - /busybox/cat
+    tty: true
+    volumeMounts:
+      - name: docker-config
+        mountPath: /kaniko/.docker
+  volumes:
+  - name: docker-config
+    secret:
+      secretName: dockerhub-secret
+"""
         }
+      }
+
+      environment {
+        IMAGE_NAME = "docker.io/vsrleo/kaniko-test"
+      }
+
+      steps {
+        sh '''
+          /kaniko/executor \
+            --context $WORKSPACE \
+            --dockerfile $WORKSPACE/Dockerfile \
+            --destination $IMAGE_NAME:latest \
+            --verbosity info
+        '''
       }
     }
   }
