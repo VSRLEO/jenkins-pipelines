@@ -4,11 +4,6 @@ podTemplate(
   label: agentLabel,
   containers: [
     containerTemplate(
-      name: 'jnlp',
-      image: 'jenkins/inbound-agent:latest',
-      args: '${computer.jnlpmac} ${computer.name}'
-    ),
-    containerTemplate(
       name: 'kaniko',
       image: 'gcr.io/kaniko-project/executor:debug',
       command: '/busybox/cat',
