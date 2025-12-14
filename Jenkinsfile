@@ -2,7 +2,7 @@ pipeline {
   agent {
     kubernetes {
       label "kaniko"
-      defaultContainer 'kaniko'
+      defaultContainer 'jnlp'
       yaml """
 apiVersion: v1
 kind: Pod
@@ -10,37 +10,31 @@ spec:
   containers:
   - name: kaniko
     image: gcr.io/kaniko-project/executor:debug
-    command:
-    - /busybox/sleep
     args:
-    - "999999"
+      - "--dockerfile=\$(WORKSPACE)/Dockerfile"
+      - "--context=\$(WORKSPACE)"
+      - "--destination=docker.io/vsrleo/myapp:\${BUILD_NUMBER}"
     volumeMounts:
-    - name: docker-config
-      mountPath: /kaniko/.docker
+      - name: docker-config
+        mountPath: /kaniko/.docker
   volumes:
-  - name: docker-config
-    secret:
-      secretName: dockerhub-secret
+    - name: docker-config
+      secret:
+        secretName: dockerhub-secret
 """
     }
   }
 
-  environment {
-    IMAGE_NAME = "docker.io/vsrleo/myapp"
-  }
-
   stages {
+    stage('Checkout') {
+      steps {
+        checkout scm
+      }
+    }
+
     stage('Build & Push Image') {
       steps {
-        container('kaniko') {
-          sh """
-            /kaniko/executor \
-              --dockerfile=\${WORKSPACE}/Dockerfile \
-              --context=\${WORKSPACE} \
-              --destination=\${IMAGE_NAME}:\${BUILD_NUMBER} \
-              --verbosity=info
-          """
-        }
+        echo "Building and pushing image using Kaniko"
       }
     }
   }
