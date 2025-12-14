@@ -5,11 +5,12 @@ WORKDIR /app
 
 ENV NODE_OPTIONS=--openssl-legacy-provider
 
-COPY package*.json ./
+# Copy dependency files from app/
+COPY app/package*.json ./
 RUN npm ci
 
+# Copy source code
 COPY src ./src
-COPY public ./public
 COPY app ./app
 
 RUN npm run build
