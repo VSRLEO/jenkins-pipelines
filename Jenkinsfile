@@ -1,6 +1,7 @@
 pipeline {
   agent {
     kubernetes {
+      label 'kaniko'
       defaultContainer 'kaniko'
       yaml """
 apiVersion: v1
@@ -10,9 +11,8 @@ spec:
   - name: kaniko
     image: gcr.io/kaniko-project/executor:debug
     command:
-      - /busybox/sleep
-    args:
-      - "999999"
+      - /busybox/cat
+    tty: true
     volumeMounts:
       - name: docker-config
         mountPath: /kaniko/.docker
@@ -29,20 +29,15 @@ spec:
   }
 
   stages {
-    stage('Checkout') {
-      steps {
-        checkout scm
-      }
-    }
-
-    stage('Build & Push Image') {
+    stage('Build & Push') {
       steps {
         container('kaniko') {
           sh '''
             /kaniko/executor \
-              --context=$WORKSPACE \
-              --dockerfile=$WORKSPACE/Dockerfile \
-              --destination=${IMAGE_NAME}:latest
+              --context $WORKSPACE \
+              --dockerfile $WORKSPACE/Dockerfile \
+              --destination $IMAGE_NAME:latest \
+              --verbosity info
           '''
         }
       }
