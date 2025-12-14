@@ -1,80 +1,43 @@
-pipeline {
-  agent {
-    kubernetes {
-      label 'kaniko-agent'
-      defaultContainer 'kaniko'
-      yaml """
-apiVersion: v1
-kind: Pod
-metadata:
-  labels:
-    app: kaniko
-spec:
-  restartPolicy: Never
-  containers:
-  - name: kaniko
-    image: gcr.io/kaniko-project/executor:debug
-    tty: true
-    env:
-      - name: DOCKER_CONFIG
-        value: /kaniko/.docker
-    command:
-      - /busybox/cat
-    volumeMounts:
-      - name: docker-config
-        mountPath: /kaniko/.docker
-      - name: workspace-volume
-        mountPath: /home/jenkins/agent
-  - name: jnlp
-    image: jenkins/inbound-agent:latest
-    volumeMounts:
-      - name: docker-config
-        mountPath: /kaniko/.docker
-      - name: workspace-volume
-        mountPath: /home/jenkins/agent
-  volumes:
-    - name: docker-config
-      secret:
-        secretName: dockerhub-secret
-    - name: workspace-volume
-      emptyDir: {}
-"""
-    }
-  }
+def podLabel = "kaniko-agent-${UUID.randomUUID().toString()}"
 
-  environment {
-    IMAGE_NAME = "docker.io/vsr11144/kaniko-test"
-    IMAGE_TAG  = "latest"
-  }
+podTemplate(
+  label: podLabel,
+  containers: [
+    containerTemplate(
+      name: 'kaniko',
+      image: 'gcr.io/kaniko-project/executor:debug',
+      command: '/busybox/cat',
+      ttyEnabled: true,
+      envVars: [
+        envVar(key: 'DOCKER_CONFIG', value: '/kaniko/.docker')
+      ]
+    )
+  ],
+  volumes: [
+    secretVolume(
+      secretName: 'dockerhub-secret',
+      mountPath: '/kaniko/.docker'
+    )
+  ]
+) {
 
-  stages {
+  node(podLabel) {
 
-    stage('Checkout Source') {
-      steps {
-        checkout scm
-      }
-    }
-
-    stage('Verify Workspace') {
-      steps {
-        sh '''
-          echo "Workspace contents:"
-          ls -la
-          test -f Dockerfile
-        '''
-      }
+    stage('Checkout') {
+      checkout scm
     }
 
     stage('Build & Push Image') {
-      steps {
+      container('kaniko') {
         sh '''
           /kaniko/executor \
-            --context /home/jenkins/agent/workspace/auto-kaniko-cicd \
+            --context $WORKSPACE \
             --dockerfile Dockerfile \
-            --destination ${IMAGE_NAME}:${IMAGE_TAG} \
+            --destination docker.io/vsr11144/kaniko-test:latest \
             --verbosity info
         '''
       }
     }
+
   }
 }
