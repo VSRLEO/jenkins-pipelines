@@ -1,7 +1,7 @@
-def agentLabel = "kaniko-agent-${UUID.randomUUID()}"
+def label = "kaniko-${UUID.randomUUID()}"
 
 podTemplate(
-  label: agentLabel,
+  label: label,
   containers: [
     containerTemplate(
       name: 'kaniko',
@@ -17,7 +17,7 @@ podTemplate(
     )
   ]
 ) {
-  node(agentLabel) {
+  node(label) {
     container('kaniko') {
       sh '''
         /kaniko/executor \
