@@ -20,7 +20,6 @@ podTemplate(
     )
   ]
 ) {
-
   node(podLabel) {
 
     stage('Checkout') {
@@ -38,6 +37,5 @@ podTemplate(
         '''
       }
     }
-
   }
 }
