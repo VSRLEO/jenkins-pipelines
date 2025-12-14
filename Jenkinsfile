@@ -2,25 +2,28 @@ pipeline {
   agent {
     kubernetes {
       label 'kaniko'
-      defaultContainer 'kaniko'
-      yaml """
-apiVersion: v1
-kind: Pod
-spec:
-  containers:
-  - name: kaniko
-    image: gcr.io/kaniko-project/executor:debug
-    command:
-      - /busybox/cat
-    tty: true
-    volumeMounts:
-      - name: docker-config
-        mountPath: /kaniko/.docker
-  volumes:
-  - name: docker-config
-    secret:
-      secretName: dockerhub-secret
-"""
+      // Define the custom container here, not inside a 'yaml' block
+      containerTemplate {
+        name 'kaniko'
+        image 'gcr.io/kaniko-project/executor:debug'
+        command '/busybox/cat'
+        tty true
+        volumeMounts {
+          volumeMount {
+            mountPath '/kaniko/.docker'
+            name 'docker-config'
+          }
+        }
+      }
+      
+      // Define the required volume here
+      volumes {
+        secret {
+          secretName 'dockerhub-secret'
+          mountPath '/kaniko/.docker'
+          name 'docker-config'
+        }
+      }
     }
   }
 
@@ -31,6 +34,7 @@ spec:
   stages {
     stage('Build & Push') {
       steps {
+        // Run the steps inside the custom 'kaniko' container
         container('kaniko') {
           sh '''
             /kaniko/executor \
