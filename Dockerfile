@@ -3,15 +3,17 @@ FROM node:18-alpine AS build
 
 WORKDIR /app
 
+# Required for old react-scripts + webpack
 ENV NODE_OPTIONS=--openssl-legacy-provider
 
-# Copy dependency files from app/
-COPY app/package*.json ./
+# Copy dependency files (ROOT level)
+COPY package.json package-lock.json ./
+
 RUN npm ci
 
-# Copy source code
+# Copy application source
 COPY src ./src
-COPY app ./app
+COPY public ./public
 
 RUN npm run build
 
