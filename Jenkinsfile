@@ -1,28 +1,22 @@
 pipeline {
   agent {
     kubernetes {
-      label "kaniko"
-      defaultContainer 'jnlp'
-
+      label "kaniko-build"
       yaml """
 apiVersion: v1
 kind: Pod
 spec:
   serviceAccountName: jenkins
   containers:
-  - name: kaniko
-    image: gcr.io/kaniko-project/executor:debug
-    imagePullPolicy: Always
-    command:
-      - /kaniko/executor
-    args:
-      - --dockerfile=Dockerfile
-      - --context=\$(WORKSPACE)
-      - --destination=vsrleo/netflix-clone:latest
-      - --verbosity=info
-    volumeMounts:
-      - name: docker-config
-        mountPath: /kaniko/.docker
+    - name: kaniko
+      image: gcr.io/kaniko-project/executor:debug
+      command:
+        - /busybox/sleep
+      args:
+        - "999999"
+      volumeMounts:
+        - name: docker-config
+          mountPath: /kaniko/.docker
   volumes:
     - name: docker-config
       secret:
@@ -32,9 +26,23 @@ spec:
   }
 
   stages {
+    stage('Checkout') {
+      steps {
+        checkout scm
+      }
+    }
+
     stage('Build & Push Image') {
       steps {
-        echo "Kaniko build started"
+        container('kaniko') {
+          sh '''
+            /kaniko/executor \
+              --dockerfile=Dockerfile \
+              --context=$(pwd) \
+              --destination=docker.io/vsrleo/netflix-clone:${BUILD_NUMBER} \
+              --verbosity=info
+          '''
+        }
       }
     }
   }
