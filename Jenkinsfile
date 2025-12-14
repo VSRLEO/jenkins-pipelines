@@ -3,7 +3,6 @@ podTemplate(
     containerTemplate(
       name: 'jnlp',
       image: 'jenkins/inbound-agent:latest',
-      args: '${computer.jnlpmac} ${computer.name}',
       ttyEnabled: true
     ),
     containerTemplate(
@@ -23,7 +22,8 @@ podTemplate(
         /kaniko/executor \
           --context $WORKSPACE \
           --dockerfile Dockerfile \
-          --destination docker.io/vsrleo/kaniko-test:latest
+          --destination docker.io/vsrleo/kaniko-test:latest \
+          --verbosity info
       '''
     }
   }
