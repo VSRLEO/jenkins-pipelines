@@ -22,18 +22,27 @@ podTemplate(
   ]
 ) {
   node(agentLabel) {
+
+    /*  THIS WAS MISSING */
+    stage('Checkout Source') {
+      checkout scm
+    }
+
     container('kaniko') {
 
-      // DEBUG (keep once)
-      sh 'ls -la $WORKSPACE'
+      stage('Verify Workspace') {
+        sh 'ls -la'
+      }
 
-      sh '''
-        /kaniko/executor \
-          --context $WORKSPACE \
-          --dockerfile Dockerfile \
-          --destination docker.io/vsrleo/kaniko-test:latest \
-          --verbosity info
-      '''
+      stage('Build & Push Image') {
+        sh '''
+          /kaniko/executor \
+            --context $WORKSPACE \
+            --dockerfile Dockerfile \
+            --destination docker.io/vsrleo/kaniko-test:latest \
+            --verbosity info
+        '''
+      }
     }
   }
 }
