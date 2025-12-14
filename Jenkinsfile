@@ -22,7 +22,7 @@ spec:
       image: jenkins/inbound-agent:latest
 
     - name: kaniko
-      image: gcr.io/kaniko-project/executor:latest
+      image: gcr.io/kaniko-project/executor:debug
       command:
         - /busybox/sleep
       args:
@@ -60,7 +60,7 @@ spec:
 
   post {
     success {
-      echo "✅ Image successfully built and pushed to DockerHub"
+      echo "✅ Image built & pushed successfully"
     }
     failure {
       echo "❌ Kaniko build failed"
