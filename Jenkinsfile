@@ -1,31 +1,27 @@
-podTemplate(
-  label: 'kaniko-agent',
-  yaml: """
-apiVersion: v1
-kind: Pod
-spec:
-  containers:
-  - name: kaniko
-    image: gcr.io/kaniko-project/executor:debug
-    command:
-    - /busybox/cat
-    tty: true
-    volumeMounts:
-    - name: docker-config
-      mountPath: /kaniko/.docker
-  - name: jnlp
-    image: jenkins/inbound-agent:latest
-    volumeMounts:
-    - name: docker-config
-      mountPath: /kaniko/.docker
-  volumes:
-  - name: docker-config
-    secret:
-      secretName: dockerhub-secret
-"""
-) {
+def agentLabel = "kaniko-agent"
 
-  node('kaniko-agent') {
+podTemplate(
+  label: agentLabel,
+  containers: [
+    containerTemplate(
+      name: 'jnlp',
+      image: 'jenkins/inbound-agent:latest'
+    ),
+    containerTemplate(
+      name: 'kaniko',
+      image: 'gcr.io/kaniko-project/executor:debug',
+      command: '/busybox/cat',
+      ttyEnabled: true
+    )
+  ],
+  volumes: [
+    secretVolume(
+      secretName: 'dockerhub-secret',
+      mountPath: '/kaniko/.docker'
+    )
+  ]
+) {
+  node(agentLabel) {
 
     stage('Checkout Source') {
       checkout scm
@@ -33,13 +29,8 @@ spec:
 
     container('kaniko') {
 
-      stage('Fix Docker Auth') {
-        sh '''
-          ls -la /kaniko/.docker
-          cp /kaniko/.docker/.dockerconfigjson /kaniko/.docker/config.json
-          chmod 600 /kaniko/.docker/config.json
-          cat /kaniko/.docker/config.json | head -c 50
-        '''
+      stage('Verify Workspace') {
+        sh 'ls -la'
       }
 
       stage('Build & Push Image') {
