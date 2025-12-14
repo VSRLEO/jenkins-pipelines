@@ -28,17 +28,12 @@ spec:
 
     - name: kaniko
       image: gcr.io/kaniko-project/executor:latest
-      command:
-        - sh
-        - -c
       args:
-        - |
-          /kaniko/executor \
-          --dockerfile=/workspace/Dockerfile \
-          --context=/workspace \
-          --destination=docker.io/vsr11144/netflix-clone-app:${BUILD_NUMBER} \
-          --destination=docker.io/vsr11144/netflix-clone-app:latest \
-          --verbosity=info
+        - "--dockerfile=/workspace/Dockerfile"
+        - "--context=/workspace"
+        - "--destination=docker.io/vsr11144/netflix-clone-app:${BUILD_NUMBER}"
+        - "--destination=docker.io/vsr11144/netflix-clone-app:latest"
+        - "--verbosity=info"
       volumeMounts:
         - name: workspace
           mountPath: /workspace
@@ -52,17 +47,14 @@ spec:
 
     stage('Checkout') {
       steps {
-        sh 'pwd'
-        sh 'ls -la'
         checkout scm
-        sh 'ls -la'
       }
     }
 
     stage('Build & Push Image') {
       steps {
         container('kaniko') {
-          sh 'echo "Kaniko build started"'
+          echo "Kaniko build started"
         }
       }
     }
