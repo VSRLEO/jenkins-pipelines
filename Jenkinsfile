@@ -11,7 +11,10 @@ podTemplate(
       name: 'kaniko',
       image: 'gcr.io/kaniko-project/executor:debug',
       command: '/busybox/cat',
-      ttyEnabled: true
+      ttyEnabled: true,
+      envVars: [
+        envVar(key: 'DOCKER_CONFIG', value: '/kaniko/.docker')
+      ]
     )
   ],
   volumes: [
