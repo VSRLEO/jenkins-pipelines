@@ -1,69 +1,47 @@
 pipeline {
   agent {
     kubernetes {
-      cloud 'kubernetes'
-      label "kaniko-${env.BUILD_NUMBER}"
-      defaultContainer 'jnlp'
-
+      label "kaniko"
+      defaultContainer 'kaniko'
       yaml """
 apiVersion: v1
 kind: Pod
 spec:
-  serviceAccountName: jenkins
-  restartPolicy: Never
-
-  volumes:
-    - name: docker-config
-      secret:
-        secretName: dockerhub-secret
-
   containers:
-    - name: jnlp
-      image: jenkins/inbound-agent:latest
-
-    - name: kaniko
-      image: gcr.io/kaniko-project/executor:debug
-      command:
-        - /busybox/sleep
-      args:
-        - "999999"
-      volumeMounts:
-        - name: docker-config
-          mountPath: /kaniko/.docker
+  - name: kaniko
+    image: gcr.io/kaniko-project/executor:debug
+    command:
+    - /busybox/sleep
+    args:
+    - "999999"
+    volumeMounts:
+    - name: docker-config
+      mountPath: /kaniko/.docker
+  volumes:
+  - name: docker-config
+    secret:
+      secretName: dockerhub-secret
 """
     }
   }
 
-  stages {
-
-    stage('Checkout') {
-      steps {
-        checkout scm
-      }
-    }
-
-    stage('Build & Push Image (Kaniko)') {
-      steps {
-        container('kaniko') {
-          sh '''
-            /kaniko/executor \
-              --dockerfile=Dockerfile \
-              --context=$(pwd) \
-              --destination=docker.io/vsr11144/netflix-clone-app:${BUILD_NUMBER} \
-              --destination=docker.io/vsr11144/netflix-clone-app:latest \
-              --verbosity=info
-          '''
-        }
-      }
-    }
+  environment {
+    IMAGE_NAME = "docker.io/<YOUR_DOCKERHUB_USERNAME>/myapp"
   }
 
-  post {
-    success {
-      echo "✅ Image built & pushed successfully"
-    }
-    failure {
-      echo "❌ Kaniko build failed"
+  stages {
+    stage('Build & Push Image') {
+      steps {
+        container('kaniko') {
+          sh """
+            /kaniko/executor \
+              --dockerfile=\${WORKSPACE}/Dockerfile \
+              --context=\${WORKSPACE} \
+              --destination=\${IMAGE_NAME}:\${BUILD_NUMBER} \
+              --verbosity=info
+          """
+        }
+      }
     }
   }
 }
