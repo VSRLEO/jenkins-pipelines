@@ -13,8 +13,6 @@ spec:
   restartPolicy: Never
 
   volumes:
-    - name: workspace
-      emptyDir: {}
     - name: docker-config
       secret:
         secretName: dockerhub-secret
@@ -22,21 +20,16 @@ spec:
   containers:
     - name: jnlp
       image: jenkins/inbound-agent:latest
-      volumeMounts:
-        - name: workspace
-          mountPath: /workspace
 
     - name: kaniko
       image: gcr.io/kaniko-project/executor:latest
       args:
-        - "--dockerfile=/workspace/Dockerfile"
-        - "--context=/workspace"
+        - "--dockerfile=/home/jenkins/agent/workspace/Dockerfile"
+        - "--context=/home/jenkins/agent/workspace"
         - "--destination=docker.io/vsr11144/netflix-clone-app:${BUILD_NUMBER}"
         - "--destination=docker.io/vsr11144/netflix-clone-app:latest"
         - "--verbosity=info"
       volumeMounts:
-        - name: workspace
-          mountPath: /workspace
         - name: docker-config
           mountPath: /kaniko/.docker
 """
@@ -54,7 +47,7 @@ spec:
     stage('Build & Push Image') {
       steps {
         container('kaniko') {
-          echo "Kaniko build started"
+          echo "Kaniko build & push running"
         }
       }
     }
@@ -62,10 +55,10 @@ spec:
 
   post {
     success {
-      echo "Docker image built and pushed successfully"
+      echo "✅ Image built and pushed to DockerHub"
     }
     failure {
-      echo "Kaniko build failed"
+      echo "❌ Kaniko build failed"
     }
   }
 }
