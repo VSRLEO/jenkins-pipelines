@@ -6,7 +6,10 @@ podTemplate(
     containerTemplate(
       name: 'jnlp',
       image: 'jenkins/inbound-agent:latest',
-      args: '-url http://jenkins.jenkins.svc.cluster.local:8080',
+      args: '-url http://jenkins.jenkins.svc.cluster.local:8080 -webSocket=false',
+      envVars: [
+        envVar(key: 'JENKINS_AGENT_PROTOCOLS', value: 'JNLP4-connect')
+      ],
       ttyEnabled: true
     ),
     containerTemplate(
@@ -17,10 +20,7 @@ podTemplate(
     )
   ],
   volumes: [
-    secretVolume(
-      secretName: 'dockerhub-secret',
-      mountPath: '/kaniko/.docker'
-    )
+    secretVolume(secretName: 'dockerhub-secret', mountPath: '/kaniko/.docker')
   ]
 ) {
   node(agentLabel) {
