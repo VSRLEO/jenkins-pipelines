@@ -1,5 +1,7 @@
+def agentLabel = "kaniko-agent-${UUID.randomUUID().toString()}"
+
 podTemplate(
-  label: 'kaniko-agent',
+  label: agentLabel,
   containers: [
     containerTemplate(
       name: 'jnlp',
@@ -15,10 +17,13 @@ podTemplate(
     )
   ],
   volumes: [
-    secretVolume(secretName: 'dockerhub-secret', mountPath: '/kaniko/.docker')
+    secretVolume(
+      secretName: 'dockerhub-secret',
+      mountPath: '/kaniko/.docker'
+    )
   ]
 ) {
-  node(POD_LABEL) {
+  node(agentLabel) {
     container('kaniko') {
       sh '''
         /kaniko/executor \
