@@ -1,47 +1,77 @@
-def agentLabel = "kaniko-agent"
+pipeline {
+  agent {
+    kubernetes {
+      label 'kaniko-agent'
+      defaultContainer 'kaniko'
+      yaml """
+apiVersion: v1
+kind: Pod
+metadata:
+  labels:
+    app: kaniko
+spec:
+  restartPolicy: Never
+  containers:
+  - name: kaniko
+    image: gcr.io/kaniko-project/executor:debug
+    tty: true
+    env:
+      - name: DOCKER_CONFIG
+        value: /kaniko/.docker
+    command:
+      - /busybox/cat
+    volumeMounts:
+      - name: docker-config
+        mountPath: /kaniko/.docker
+      - name: workspace-volume
+        mountPath: /home/jenkins/agent
+  - name: jnlp
+    image: jenkins/inbound-agent:latest
+    volumeMounts:
+      - name: docker-config
+        mountPath: /kaniko/.docker
+      - name: workspace-volume
+        mountPath: /home/jenkins/agent
+  volumes:
+    - name: docker-config
+      secret:
+        secretName: dockerhub-secret
+    - name: workspace-volume
+      emptyDir: {}
+"""
+    }
+  }
 
-podTemplate(
-  label: agentLabel,
-  containers: [
-    containerTemplate(
-      name: 'jnlp',
-      image: 'jenkins/inbound-agent:latest'
-    ),
-    containerTemplate(
-      name: 'kaniko',
-      image: 'gcr.io/kaniko-project/executor:debug',
-      command: '/busybox/cat',
-      ttyEnabled: true,
-      envVars: [
-        envVar(key: 'DOCKER_CONFIG', value: '/kaniko/.docker')
-      ]
-    )
-  ],
-  volumes: [
-    secretVolume(
-      secretName: 'dockerhub-secret',
-      mountPath: '/kaniko/.docker'
-    )
-  ]
-) {
-  node(agentLabel) {
+  environment {
+    IMAGE_NAME = "docker.io/vsr11144/kaniko-test"
+    IMAGE_TAG  = "latest"
+  }
+
+  stages {
 
     stage('Checkout Source') {
-      checkout scm
+      steps {
+        checkout scm
+      }
     }
 
-    container('kaniko') {
-
-      stage('Verify Workspace') {
-        sh 'ls -la'
+    stage('Verify Workspace') {
+      steps {
+        sh '''
+          echo "Workspace contents:"
+          ls -la
+          test -f Dockerfile
+        '''
       }
+    }
 
-      stage('Build & Push Image') {
+    stage('Build & Push Image') {
+      steps {
         sh '''
           /kaniko/executor \
-            --context $WORKSPACE \
+            --context /home/jenkins/agent/workspace/auto-kaniko-cicd \
             --dockerfile Dockerfile \
-            --destination docker.io/vsr11144/kaniko-test:latest \
+            --destination ${IMAGE_NAME}:${IMAGE_TAG} \
             --verbosity info
         '''
       }
