@@ -1,7 +1,5 @@
-def agentLabel = "kaniko-agent-${UUID.randomUUID()}"
-
 podTemplate(
-  label: agentLabel,
+  label: "kaniko-agent",
   containers: [
     containerTemplate(
       name: 'jnlp',
@@ -21,13 +19,7 @@ podTemplate(
     )
   ]
 ) {
-  node(agentLabel) {
-
-    /*  THIS WAS MISSING */
-    stage('Checkout Source') {
-      checkout scm
-    }
-
+  node("kaniko-agent") {
     container('kaniko') {
 
       stage('Verify Workspace') {
@@ -39,7 +31,7 @@ podTemplate(
           /kaniko/executor \
             --context $WORKSPACE \
             --dockerfile Dockerfile \
-            --destination docker.io/vsrleo/kaniko-test:latest \
+            --destination docker.io/vsr11144/kaniko-test:latest \
             --verbosity info
         '''
       }
