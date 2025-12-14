@@ -1,51 +1,35 @@
 pipeline {
   agent {
     kubernetes {
+      label "auto-kaniko-cicd"
+      defaultContainer 'jnlp'
       yaml """
 apiVersion: v1
 kind: Pod
+metadata:
+  labels:
+    app: kaniko
 spec:
   serviceAccountName: jenkins
-  restartPolicy: Never
-
   containers:
-    - name: jnlp
-      image: jenkins/inbound-agent:latest
-      resources:
-        requests:
-          cpu: "100m"
-          memory: "256Mi"
+  - name: jnlp
+    image: jenkins/inbound-agent:latest
 
-    - name: kaniko
-      image: gcr.io/kaniko-project/executor:debug
-      command:
-        - /busybox/sleep
-      args:
-        - "999999"
-      resources:
-        requests:
-          cpu: "200m"
-          memory: "512Mi"
-      volumeMounts:
-        - name: docker-config
-          mountPath: /kaniko/.docker
-        - name: workspace-volume
-          mountPath: /workspace
-
+  - name: kaniko
+    image: gcr.io/kaniko-project/executor:debug
+    command:
+      - /busybox/sleep
+    args:
+      - "999999"
+    volumeMounts:
+      - name: docker-config
+        mountPath: /kaniko/.docker
   volumes:
     - name: docker-config
       secret:
         secretName: dockerhub-secret
-
-    - name: workspace-volume
-      emptyDir: {}
 """
     }
-  }
-
-  environment {
-    DOCKERHUB_USER = "vsrleo"   // <-- your DockerHub username
-    IMAGE_NAME     = "kaniko-demo"
   }
 
   stages {
@@ -60,18 +44,13 @@ spec:
         container('kaniko') {
           sh '''
             /kaniko/executor \
-              --dockerfile=Dockerfile \
-              --context=/workspace \
-              --destination=docker.io/${DOCKERHUB_USER}/${IMAGE_NAME}:${BUILD_NUMBER}
+              --context $WORKSPACE \
+              --dockerfile $WORKSPACE/Dockerfile \
+              --destination docker.io/vsrleo/myapp:${BUILD_NUMBER} \
+              --verbosity info
           '''
         }
       }
-    }
-  }
-
-  post {
-    success {
-      echo "Docker image pushed successfully"
     }
   }
 }
