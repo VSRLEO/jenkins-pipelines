@@ -1,8 +1,13 @@
-def label = "kaniko-${UUID.randomUUID()}"
+def agentLabel = "kaniko-agent-${UUID.randomUUID()}"
 
 podTemplate(
-  label: label,
+  label: agentLabel,
   containers: [
+    containerTemplate(
+      name: 'jnlp',
+      image: 'jenkins/inbound-agent:latest',
+      args: '${computer.jnlpmac} ${computer.name}'
+    ),
     containerTemplate(
       name: 'kaniko',
       image: 'gcr.io/kaniko-project/executor:debug',
@@ -17,7 +22,7 @@ podTemplate(
     )
   ]
 ) {
-  node(label) {
+  node(agentLabel) {
     container('kaniko') {
       sh '''
         /kaniko/executor \
