@@ -26,7 +26,7 @@ spec:
   }
 
   environment {
-    IMAGE_NAME = "docker.io/<YOUR_DOCKERHUB_USERNAME>/myapp"
+    IMAGE_NAME = "docker.io/vsrleo/myapp"
   }
 
   stages {
