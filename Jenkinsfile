@@ -13,11 +13,13 @@ spec:
   - name: kaniko
     image: gcr.io/kaniko-project/executor:debug
     imagePullPolicy: Always
+    command:
+      - /kaniko/executor
     args:
-      - "--dockerfile=Dockerfile"
-      - "--context=\$(WORKSPACE)"
-      - "--destination=vsr11144/netflix-clone:latest"
-      - "--verbosity=info"
+      - --dockerfile=Dockerfile
+      - --context=\$(WORKSPACE)
+      - --destination=vsrleo/netflix-clone:latest
+      - --verbosity=info
     volumeMounts:
       - name: docker-config
         mountPath: /kaniko/.docker
@@ -32,7 +34,7 @@ spec:
   stages {
     stage('Build & Push Image') {
       steps {
-        echo "Building and pushing Docker image using Kaniko"
+        echo "Kaniko build started"
       }
     }
   }
