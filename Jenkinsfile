@@ -33,10 +33,12 @@ spec:
 
     container('kaniko') {
 
-      stage('Verify Docker Auth') {
+      stage('Fix Docker Auth') {
         sh '''
           ls -la /kaniko/.docker
-          cat /kaniko/.docker/config.json
+          cp /kaniko/.docker/.dockerconfigjson /kaniko/.docker/config.json
+          chmod 600 /kaniko/.docker/config.json
+          cat /kaniko/.docker/config.json | head -c 50
         '''
       }
 
