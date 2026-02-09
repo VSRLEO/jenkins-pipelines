@@ -6,17 +6,11 @@ pipeline {
       yaml """
 apiVersion: v1
 kind: Pod
-metadata:
-  labels:
-    app: auto-ci-cd
 spec:
   serviceAccountName: jenkins
   restartPolicy: Never
 
   containers:
-  # -------------------------------
-  # BuildKit daemon (image builder)
-  # -------------------------------
   - name: buildkit
     image: moby/buildkit:v0.13.2
     args:
@@ -30,9 +24,6 @@ spec:
       - name: workspace
         mountPath: /workspace
 
-  # -------------------------------
-  # Builder container (git, shell)
-  # -------------------------------
   - name: builder
     image: docker:27-cli
     command: ["cat"]
@@ -47,9 +38,6 @@ spec:
         mountPath: /workspace
     workingDir: /workspace
 
-  # -------------------------------
-  # Jenkins JNLP agent
-  # -------------------------------
   - name: jnlp
     image: jenkins/inbound-agent:3355.v388858a_47b_33-3-jdk21
     env:
@@ -76,9 +64,6 @@ spec:
 
   stages {
 
-    // -------------------------------
-    // Checkout source code
-    // -------------------------------
     stage('Checkout Code') {
       steps {
         container('builder') {
@@ -87,9 +72,6 @@ spec:
       }
     }
 
-    // -------------------------------
-    // Build & Push Docker Image
-    // -------------------------------
     stage('Build & Push Image') {
       steps {
         container('buildkit') {
@@ -99,14 +81,14 @@ spec:
             echo "🚀 Building & Pushing Image"
             echo "IMAGE  : ${IMAGE_NAME}"
             echo "TAG    : ${IMAGE_TAG}, latest"
-            echo "CTX    : /workspace"
+            echo "CTX    : /workspace/frontend"
 
             buildctl \
               --addr tcp://0.0.0.0:1234 \
               build \
               --frontend dockerfile.v0 \
-              --local context=/workspace \
-              --local dockerfile=/workspace \
+              --local context=/workspace/frontend \
+              --local dockerfile=/workspace/frontend \
               --output type=image,name=${IMAGE_NAME}:${IMAGE_TAG},push=true \
               --output type=image,name=${IMAGE_NAME}:latest,push=true
           '''
@@ -117,7 +99,7 @@ spec:
 
   post {
     success {
-      echo "✅ Docker image successfully built & pushed"
+      echo "✅ Docker image built and pushed successfully"
     }
     failure {
       echo "❌ Pipeline failed"
