@@ -80,8 +80,7 @@ EOF
               --local context=frontend \
               --local dockerfile=frontend \
               --output type=image,name=${IMAGE_NAME}:${BUILD_NUMBER},push=true \
-              --output type=image,name=${IMAGE_NAME}:latest,push=true \
-              --registry-auth
+              --output type=image,name=${IMAGE_NAME}:latest,push=true
           '''
         }
       }
@@ -90,7 +89,7 @@ EOF
 
   post {
     success {
-      echo "✅ IMAGE PUSHED TO DOCKER HUB SUCCESSFULLY"
+      echo "✅ IMAGE BUILT & PUSHED TO DOCKER HUB"
     }
     failure {
       echo "❌ PIPELINE FAILED"
