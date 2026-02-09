@@ -21,7 +21,7 @@ spec:
     volumeMounts:
       - name: docker-config
         mountPath: /root/.docker
-      - name: workspace-volume
+      - name: jenkins-workspace
         mountPath: /home/jenkins/agent
 
   - name: builder
@@ -34,9 +34,8 @@ spec:
     volumeMounts:
       - name: docker-config
         mountPath: /root/.docker
-      - name: workspace-volume
+      - name: jenkins-workspace
         mountPath: /home/jenkins/agent
-    workingDir: /home/jenkins/agent/workspace/auto-ci-cd
 
   - name: jnlp
     image: jenkins/inbound-agent:3355.v388858a_47b_33-3-jdk21
@@ -44,14 +43,14 @@ spec:
       - name: JENKINS_AGENT_WORKDIR
         value: /home/jenkins/agent
     volumeMounts:
-      - name: workspace-volume
+      - name: jenkins-workspace
         mountPath: /home/jenkins/agent
 
   volumes:
     - name: docker-config
       secret:
         secretName: dockerhub-secret
-    - name: workspace-volume
+    - name: jenkins-workspace
       emptyDir: {}
 """
     }
@@ -60,7 +59,7 @@ spec:
   environment {
     IMAGE_NAME = "docker.io/vsr11144/myapp"
     IMAGE_TAG  = "${BUILD_NUMBER}"
-    APP_DIR    = "/home/jenkins/agent/workspace/auto-ci-cd/frontend"
+    APP_DIR    = "\${WORKSPACE}/frontend"
   }
 
   stages {
@@ -69,7 +68,7 @@ spec:
       steps {
         container('builder') {
           checkout scm
-          sh 'ls -la'
+          sh 'ls -la $WORKSPACE'
         }
       }
     }
@@ -79,10 +78,9 @@ spec:
         container('buildkit') {
           sh '''
             set -e
-
             echo "🚀 Building & Pushing Image"
             echo "IMAGE  : ${IMAGE_NAME}"
-            echo "TAG    : ${IMAGE_TAG}, latest"
+            echo "TAG    : ${IMAGE_TAG}"
             echo "APP DIR: ${APP_DIR}"
 
             ls -la ${APP_DIR}
