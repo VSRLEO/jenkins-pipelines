@@ -19,19 +19,6 @@ spec:
       - name: workspace
         mountPath: /home/jenkins/agent
 
-  - name: docker
-    image: docker:27-cli
-    command: ["cat"]
-    tty: true
-    env:
-      - name: DOCKER_CONFIG
-        value: /root/.docker
-    volumeMounts:
-      - name: docker-config
-        mountPath: /root/.docker
-      - name: workspace
-        mountPath: /home/jenkins/agent
-
   - name: jnlp
     image: jenkins/inbound-agent:3355.v388858a_47b_33-3-jdk21
     volumeMounts:
@@ -59,14 +46,22 @@ spec:
       }
     }
 
-    stage("Docker Login (TEST ONLY)") {
+    stage("Write DockerHub Auth (TEST ONLY)") {
       steps {
-        container("docker") {
+        container("buildkit") {
           sh '''
             set -eux
-            echo "dckr_pat_cX5HYx8vHzAO13jYNLBUts6VowI" | docker login \
-              -u vsr11144 \
-              --password-stdin
+            mkdir -p /root/.docker
+
+            cat <<EOF > /root/.docker/config.json
+{
+  "auths": {
+    "https://index.docker.io/v1/": {
+      "auth": "dnNyMTExNDQ6ZGNrcl9wYXRfY1g1SFl4OHZIekFPMTNqWU5MQlV0czZWb3dJ"
+    }
+  }
+}
+EOF
           '''
         }
       }
@@ -95,7 +90,7 @@ spec:
 
   post {
     success {
-      echo "✅ IMAGE BUILT & PUSHED SUCCESSFULLY"
+      echo "✅ IMAGE PUSHED TO DOCKER HUB SUCCESSFULLY"
     }
     failure {
       echo "❌ PIPELINE FAILED"
