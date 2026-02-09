@@ -1,8 +1,6 @@
 pipeline {
   agent {
     kubernetes {
-      label "auto-ci-cd"
-      defaultContainer "builder"
       yaml """
 apiVersion: v1
 kind: Pod
@@ -19,8 +17,6 @@ spec:
     volumeMounts:
       - name: docker-config
         mountPath: /root/.docker
-      - name: jenkins-home
-        mountPath: /home/jenkins/agent
 
   - name: builder
     image: docker:27-cli
@@ -32,54 +28,39 @@ spec:
     volumeMounts:
       - name: docker-config
         mountPath: /root/.docker
-      - name: jenkins-home
-        mountPath: /home/jenkins/agent
 
   volumes:
   - name: docker-config
     secret:
       secretName: dockerhub-secret
-  - name: jenkins-home
-    emptyDir: {}
 """
     }
   }
 
   environment {
-    DOCKER_IMAGE = "docker.io/vsr11144/jenkins-buildkit-test"
-    IMAGE_TAG    = "${BUILD_NUMBER}"
+    IMAGE_NAME = "docker.io/vsr11144/jenkins-buildkit-test"
+    IMAGE_TAG  = "${BUILD_NUMBER}"
   }
 
   stages {
-
-    stage("Checkout Code") {
-      steps {
-        checkout scm
-        sh '''
-          echo "Workspace:"
-          pwd
-          ls -la
-          echo "Frontend directory:"
-          ls -la frontend
-        '''
-      }
-    }
 
     stage("Build & Push Image") {
       steps {
         container("builder") {
           sh '''
-            set -e
-            echo "Building image"
-            echo "Image: ${DOCKER_IMAGE}"
-            echo "Tag  : ${IMAGE_TAG}"
+            set -eux
+
+            echo "Workspace:"
+            pwd
+            ls -la
+            ls -la frontend
 
             buildctl --addr tcp://0.0.0.0:1234 build \
               --frontend dockerfile.v0 \
               --local context=frontend \
               --local dockerfile=frontend \
-              --output type=image,name=${DOCKER_IMAGE}:${IMAGE_TAG},push=true \
-              --output type=image,name=${DOCKER_IMAGE}:latest,push=true
+              --output type=image,name=${IMAGE_NAME}:${IMAGE_TAG},push=true \
+              --output type=image,name=${IMAGE_NAME}:latest,push=true
           '''
         }
       }
@@ -88,7 +69,7 @@ spec:
 
   post {
     success {
-      echo "✅ IMAGE PUSHED SUCCESSFULLY"
+      echo "✅ IMAGE PUSHED TO DOCKER HUB"
     }
     failure {
       echo "❌ PIPELINE FAILED"
