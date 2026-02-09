@@ -21,8 +21,8 @@ spec:
     volumeMounts:
       - name: docker-config
         mountPath: /root/.docker
-      - name: workspace
-        mountPath: /workspace
+      - name: workspace-volume
+        mountPath: /home/jenkins/agent
 
   - name: builder
     image: docker:27-cli
@@ -34,25 +34,25 @@ spec:
     volumeMounts:
       - name: docker-config
         mountPath: /root/.docker
-      - name: workspace
-        mountPath: /workspace
-    workingDir: /workspace
+      - name: workspace-volume
+        mountPath: /home/jenkins/agent
+    workingDir: /home/jenkins/agent/workspace/auto-ci-cd
 
   - name: jnlp
     image: jenkins/inbound-agent:3355.v388858a_47b_33-3-jdk21
     env:
       - name: JENKINS_AGENT_WORKDIR
-        value: /workspace
+        value: /home/jenkins/agent
     volumeMounts:
-      - name: workspace
-        mountPath: /workspace
+      - name: workspace-volume
+        mountPath: /home/jenkins/agent
 
   volumes:
-    - name: workspace
-      emptyDir: {}
     - name: docker-config
       secret:
         secretName: dockerhub-secret
+    - name: workspace-volume
+      emptyDir: {}
 """
     }
   }
@@ -60,6 +60,7 @@ spec:
   environment {
     IMAGE_NAME = "docker.io/vsr11144/myapp"
     IMAGE_TAG  = "${BUILD_NUMBER}"
+    APP_DIR    = "/home/jenkins/agent/workspace/auto-ci-cd/frontend"
   }
 
   stages {
@@ -68,6 +69,7 @@ spec:
       steps {
         container('builder') {
           checkout scm
+          sh 'ls -la'
         }
       }
     }
@@ -81,14 +83,16 @@ spec:
             echo "🚀 Building & Pushing Image"
             echo "IMAGE  : ${IMAGE_NAME}"
             echo "TAG    : ${IMAGE_TAG}, latest"
-            echo "CTX    : /workspace/frontend"
+            echo "APP DIR: ${APP_DIR}"
+
+            ls -la ${APP_DIR}
 
             buildctl \
               --addr tcp://0.0.0.0:1234 \
               build \
               --frontend dockerfile.v0 \
-              --local context=/workspace/frontend \
-              --local dockerfile=/workspace/frontend \
+              --local context=${APP_DIR} \
+              --local dockerfile=${APP_DIR} \
               --output type=image,name=${IMAGE_NAME}:${IMAGE_TAG},push=true \
               --output type=image,name=${IMAGE_NAME}:latest,push=true
           '''
