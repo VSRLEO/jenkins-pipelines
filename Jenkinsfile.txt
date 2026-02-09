@@ -1,0 +1,84 @@
+pipeline {
+  agent {
+    kubernetes {
+      yaml """
+apiVersion: v1
+kind: Pod
+spec:
+  serviceAccountName: jenkins
+
+  containers:
+  - name: jnlp
+    image: jenkins/inbound-agent:3206.vb_15dcf73f6a_9-1
+
+  - name: kaniko
+    image: gcr.io/kaniko-project/executor:v1.23.2-debug
+    command:
+      - /busybox/cat
+    tty: true
+    volumeMounts:
+      - name: docker-config
+        mountPath: /kaniko/.docker/config.json
+        subPath: .dockerconfigjson
+
+  - name: kubectl
+    image: bitnami/kubectl:latest
+    command:
+      - cat
+    tty: true
+
+  volumes:
+    - name: docker-config
+      secret:
+        secretName: dockerhub-secret
+"""
+    }
+  }
+
+  environment {
+    IMAGE_NAME = "vsr11144/kaniko-test:latest"
+    NAMESPACE  = "jenkins"
+  }
+
+  stages {
+
+    stage('Checkout Code') {
+      steps {
+        checkout scm
+      }
+    }
+
+    stage('Build Image (Kaniko)') {
+      steps {
+        container('kaniko') {
+          sh '''
+            /kaniko/executor \
+              --context=dir:///home/jenkins/agent/workspace/auto-ci-cd \
+              --dockerfile=Dockerfile \
+              --destination=${IMAGE_NAME}
+          '''
+        }
+      }
+    }
+
+    stage('Deploy to Kubernetes') {
+      steps {
+        container('kubectl') {
+          sh '''
+            kubectl apply -f app-deployment.yml -n ${NAMESPACE}
+            kubectl rollout status deployment myapp -n ${NAMESPACE}
+          '''
+        }
+      }
+    }
+  }
+
+  post {
+    success {
+      echo "✅ CI/CD pipeline completed successfully"
+    }
+    failure {
+      echo "❌ CI/CD pipeline failed"
+    }
+  }
+}
