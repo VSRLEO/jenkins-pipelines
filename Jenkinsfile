@@ -6,6 +6,7 @@ apiVersion: v1
 kind: Pod
 spec:
   serviceAccountName: jenkins
+
   containers:
   - name: buildkit
     image: moby/buildkit:v0.13.2
@@ -17,22 +18,24 @@ spec:
     volumeMounts:
       - name: docker-config
         mountPath: /root/.docker
+      - name: workspace-volume
+        mountPath: /home/jenkins/agent
 
   - name: builder
     image: docker:27-cli
     command: ["cat"]
     tty: true
-    env:
-      - name: DOCKER_CONFIG
-        value: /root/.docker
     volumeMounts:
-      - name: docker-config
-        mountPath: /root/.docker
+      - name: workspace-volume
+        mountPath: /home/jenkins/agent
 
   volumes:
   - name: docker-config
     secret:
       secretName: dockerhub-secret
+
+  - name: workspace-volume
+    emptyDir: {}
 """
     }
   }
@@ -44,9 +47,9 @@ spec:
 
   stages {
 
-    stage("Build & Push Image") {
+    stage("Build & Push Image (BuildKit)") {
       steps {
-        container("builder") {
+        container("buildkit") {
           sh '''
             set -eux
 
@@ -69,7 +72,7 @@ spec:
 
   post {
     success {
-      echo "✅ IMAGE PUSHED TO DOCKER HUB"
+      echo "✅ IMAGE BUILT AND PUSHED SUCCESSFULLY"
     }
     failure {
       echo "❌ PIPELINE FAILED"
