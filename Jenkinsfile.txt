@@ -1,33 +1,67 @@
 pipeline {
+
   agent {
     kubernetes {
+      defaultContainer 'builder'
       yaml """
 apiVersion: v1
 kind: Pod
+metadata:
+  labels:
+    app: auto-ci-cd
 spec:
   serviceAccountName: jenkins
+  restartPolicy: Never
 
   containers:
-  - name: jnlp
-    image: jenkins/inbound-agent:3206.vb_15dcf73f6a_9-1
-
-  - name: kaniko
-    image: gcr.io/kaniko-project/executor:v1.23.2-debug
-    command:
-      - /busybox/cat
-    tty: true
+  # -------------------------------
+  # BuildKit daemon (image builder)
+  # -------------------------------
+  - name: buildkit
+    image: moby/buildkit:v0.13.2
+    args:
+      - "--addr"
+      - "tcp://0.0.0.0:1234"
+    securityContext:
+      privileged: true
     volumeMounts:
       - name: docker-config
-        mountPath: /kaniko/.docker/config.json
-        subPath: .dockerconfigjson
+        mountPath: /root/.docker
+      - name: workspace
+        mountPath: /workspace
 
-  - name: kubectl
-    image: bitnami/kubectl:latest
-    command:
-      - cat
+  # -------------------------------
+  # Builder container (git, shell)
+  # -------------------------------
+  - name: builder
+    image: docker:27-cli
+    command: ["cat"]
     tty: true
+    env:
+      - name: DOCKER_CONFIG
+        value: /root/.docker
+    volumeMounts:
+      - name: docker-config
+        mountPath: /root/.docker
+      - name: workspace
+        mountPath: /workspace
+    workingDir: /workspace
+
+  # -------------------------------
+  # Jenkins JNLP agent
+  # -------------------------------
+  - name: jnlp
+    image: jenkins/inbound-agent:3355.v388858a_47b_33-3-jdk21
+    env:
+      - name: JENKINS_AGENT_WORKDIR
+        value: /workspace
+    volumeMounts:
+      - name: workspace
+        mountPath: /workspace
 
   volumes:
+    - name: workspace
+      emptyDir: {}
     - name: docker-config
       secret:
         secretName: dockerhub-secret
@@ -36,37 +70,45 @@ spec:
   }
 
   environment {
-    IMAGE_NAME = "vsr11144/kaniko-test:latest"
-    NAMESPACE  = "jenkins"
+    IMAGE_NAME = "docker.io/vsr11144/myapp"
+    IMAGE_TAG  = "${BUILD_NUMBER}"
   }
 
   stages {
 
+    // -------------------------------
+    // Checkout source code
+    // -------------------------------
     stage('Checkout Code') {
       steps {
-        checkout scm
-      }
-    }
-
-    stage('Build Image (Kaniko)') {
-      steps {
-        container('kaniko') {
-          sh '''
-            /kaniko/executor \
-              --context=dir:///home/jenkins/agent/workspace/auto-ci-cd \
-              --dockerfile=Dockerfile \
-              --destination=${IMAGE_NAME}
-          '''
+        container('builder') {
+          checkout scm
         }
       }
     }
 
-    stage('Deploy to Kubernetes') {
+    // -------------------------------
+    // Build & Push Docker Image
+    // -------------------------------
+    stage('Build & Push Image') {
       steps {
-        container('kubectl') {
+        container('buildkit') {
           sh '''
-            kubectl apply -f app-deployment.yml -n ${NAMESPACE}
-            kubectl rollout status deployment myapp -n ${NAMESPACE}
+            set -e
+
+            echo "🚀 Building & Pushing Image"
+            echo "IMAGE  : ${IMAGE_NAME}"
+            echo "TAG    : ${IMAGE_TAG}, latest"
+            echo "CTX    : /workspace"
+
+            buildctl \
+              --addr tcp://0.0.0.0:1234 \
+              build \
+              --frontend dockerfile.v0 \
+              --local context=/workspace \
+              --local dockerfile=/workspace \
+              --output type=image,name=${IMAGE_NAME}:${IMAGE_TAG},push=true \
+              --output type=image,name=${IMAGE_NAME}:latest,push=true
           '''
         }
       }
@@ -75,10 +117,10 @@ spec:
 
   post {
     success {
-      echo "✅ CI/CD pipeline completed successfully"
+      echo "✅ Docker image successfully built & pushed"
     }
     failure {
-      echo "❌ CI/CD pipeline failed"
+      echo "❌ Pipeline failed"
     }
   }
 }
