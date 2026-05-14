@@ -105,7 +105,7 @@ spec:
               sonar-scanner \
                 -Dsonar.projectKey=jenkins-buildkit-test \
                 -Dsonar.sources=frontend \
-                -Dsonar.host.url=http://3.239.226.206:9000 \
+                -Dsonar.host.url=http://sonarqube.jenkins.svc.cluster.local:9000 \
                 -Dsonar.login=$SONAR_AUTH_TOKEN
             '''
           }
