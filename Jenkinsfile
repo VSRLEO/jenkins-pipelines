@@ -14,9 +14,13 @@ spec:
   # =====================================================
   - name: buildkit
     image: moby/buildkit:v0.13.2
+
     securityContext:
       privileged: true
-    args: ["--addr", "tcp://0.0.0.0:1234"]
+
+    args:
+      - "--addr"
+      - "tcp://0.0.0.0:1234"
 
     volumeMounts:
       - name: docker-config
@@ -30,8 +34,10 @@ spec:
   # =====================================================
   - name: sonar
     image: sonarsource/sonar-scanner-cli:latest
+
     command:
       - cat
+
     tty: true
 
     volumeMounts:
@@ -39,7 +45,7 @@ spec:
         mountPath: /home/jenkins/agent
 
   # =====================================================
-  # Jenkins Agent
+  # Jenkins Agent Container
   # =====================================================
   - name: jnlp
     image: jenkins/inbound-agent:3355.v388858a_47b_33-3-jdk21
@@ -49,6 +55,7 @@ spec:
         mountPath: /home/jenkins/agent
 
   volumes:
+
     - name: docker-config
       emptyDir: {}
 
@@ -62,6 +69,7 @@ spec:
   # Environment Variables
   # =====================================================
   environment {
+
     IMAGE_NAME = "docker.io/vsr11144/jenkins-buildkit-test"
 
     # SonarQube Token From Jenkins Credentials
@@ -83,6 +91,7 @@ spec:
     # SonarQube Scan
     # =====================================================
     stage("SonarQube Scan") {
+
       steps {
 
         container("sonar") {
@@ -90,9 +99,11 @@ spec:
           withSonarQubeEnv('sonarqube') {
 
             sh '''
+              set -eux
+
               sonar-scanner \
                 -Dsonar.projectKey=jenkins-buildkit-test \
-                -Dsonar.sources=frontend
+                -Dsonar.sources=frontend \
                 -Dsonar.host.url=http://10.0.1.134:9000 \
                 -Dsonar.login=$SONAR_AUTH_TOKEN
             '''
@@ -105,6 +116,7 @@ spec:
     # DockerHub Authentication
     # =====================================================
     stage("Write DockerHub Auth (TEST ONLY)") {
+
       steps {
 
         container("buildkit") {
@@ -132,6 +144,7 @@ EOF
     # Build & Push Docker Image
     # =====================================================
     stage("Build & Push Image (BuildKit)") {
+
       steps {
 
         container("buildkit") {
@@ -159,11 +172,13 @@ EOF
   post {
 
     success {
+
       echo "✅ SONARQUBE SCAN COMPLETED"
       echo "✅ IMAGE BUILT & PUSHED TO DOCKER HUB"
     }
 
     failure {
+
       echo "❌ PIPELINE FAILED"
     }
   }
