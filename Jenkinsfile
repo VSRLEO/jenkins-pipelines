@@ -57,7 +57,7 @@ spec:
 {
   "auths": {
     "https://index.docker.io/v1/": {
-      "auth": "dnNyMTExNDQ6ZGNrcl9wYXRfY1g1SFl4OHZIekFPMTNqWU5MQlV0czZWb3dJ"
+      "auth": "dnNyMTExNDQ6ZGNrcl9wYXRfMkdENWg3THpkVzU1b21GUlltc3E5OThFZ2NV"
     }
   }
 }
